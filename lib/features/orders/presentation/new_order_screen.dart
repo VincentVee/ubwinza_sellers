@@ -15,14 +15,14 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Orders'),
-        backgroundColor: Color(0xFF1A2B7B),
+        title: const Text('Manage Orders'),
+        backgroundColor: Colors.deepOrange,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('orders')
             .where('sellerId', isEqualTo: widget.sellerId)
-            .where('status', isEqualTo: 'pending')
+            .where('status', whereIn: ['pending', 'preparing'])
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -33,7 +33,7 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text(
-                'No new orders yet!',
+                'No active orders right now.',
                 style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
             );
@@ -44,17 +44,18 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
           return ListView.builder(
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              final orderData = orders[index].data() as Map<String, dynamic>;
-              final createdAt = orderData['createdAt'] is Timestamp
-                  ? orderData['createdAt'].toDate()
+              final order = orders[index].data() as Map<String, dynamic>;
+              final orderId = orders[index].id;
+              final createdAt = order['createdAt'] is Timestamp
+                  ? order['createdAt'].toDate()
                   : DateTime.now();
               final dateStr =
                   DateFormat('dd MMM yyyy, hh:mm a').format(createdAt);
 
+              final status = order['status'] ?? 'pending';
+
               return Card(
-                color:Color(0xFF1A2B7B),
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 elevation: 4,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -62,49 +63,26 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        orderData['seller']?['name'] ?? 'Unknown Seller',
+                        order['seller']?['name'] ?? 'Unknown Seller',
                         style: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      Text('Total: ZMW ${orderData['total'].toStringAsFixed(2)}'),
-                      Text('Delivery Fee: ZMW ${orderData['deliveryFee']}'),
-                      Text('Distance: ${orderData['distanceKm'].toStringAsFixed(2)} km'),
-                      Text('Ride Type: ${orderData['rideType']}'),
+                      Text('Total: ZMW ${order['total'].toStringAsFixed(2)}'),
+                      Text('Delivery Fee: ZMW ${order['deliveryFee']}'),
+                      Text('Distance: ${order['distanceKm'].toStringAsFixed(2)} km'),
+                      Text('Ride Type: ${order['rideType']}'),
                       Text('Created: $dateStr'),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Accept'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                              ),
-                              onPressed: () =>
-                                  _confirmAction(orders[index].id, 'accepted'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.cancel_outlined),
-                              label: const Text('Reject'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                              ),
-                              onPressed: () =>
-                                  _confirmAction(orders[index].id, 'cancelled'),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Status: ${status.toUpperCase()}',
+                        style: TextStyle(
+                          color: _getStatusColor(status),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      const SizedBox(height: 10),
+                      _buildActionButtons(orderId, status),
                     ],
                   ),
                 ),
@@ -116,12 +94,111 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
     );
   }
 
+  Widget _buildActionButtons(String orderId, String currentStatus) {
+    List<Widget> buttons = [];
+
+    if (currentStatus == 'pending') {
+      buttons = [
+        _buildButton(
+          label: 'Start Preparing',
+          color: Colors.orange,
+          icon: Icons.kitchen,
+          onPressed: () => _confirmAction(orderId, 'preparing'),
+        ),
+        _buildButton(
+          label: 'Cancel',
+          color: Colors.redAccent,
+          icon: Icons.cancel_outlined,
+          onPressed: () => _confirmAction(orderId, 'cancelled'),
+        ),
+      ];
+    } else if (currentStatus == 'preparing') {
+      buttons = [
+        _buildButton(
+          label: 'Mark On The Way',
+          color: Colors.green,
+          icon: Icons.delivery_dining,
+          onPressed: () => _confirmAction(orderId, 'onTheWay'),
+        ),
+        _buildButton(
+          label: 'Cancel',
+          color: Colors.redAccent,
+          icon: Icons.cancel_outlined,
+          onPressed: () => _confirmAction(orderId, 'cancelled'),
+        ),
+      ];
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: buttons
+          .map((b) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: b,
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildButton({
+    required String label,
+    required Color color,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      onPressed: onPressed,
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'preparing':
+        return Colors.blue;
+      case 'onTheWay':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   void _confirmAction(String orderId, String newStatus) {
-    final isCancel = newStatus == 'cancelled';
-    final title = isCancel ? 'Reject Order' : 'Accept Order';
-    final message = isCancel
-        ? 'Are you sure you want to reject this order? It will be marked as cancelled.'
-        : 'Are you sure you want to accept this order?';
+    String title;
+    String message;
+
+    switch (newStatus) {
+      case 'preparing':
+        title = 'Start Preparing';
+        message = 'Mark this order as preparing?';
+        break;
+      case 'onTheWay':
+        title = 'Mark On The Way';
+        message = 'Is the delivery rider now on the way?';
+        break;
+      case 'cancelled':
+        title = 'Cancel Order';
+        message =
+            'Are you sure you want to cancel this order? It will be marked as cancelled.';
+        break;
+      default:
+        title = 'Update Order';
+        message = 'Change order status to $newStatus?';
+    }
 
     showDialog(
       context: context,
@@ -140,7 +217,10 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
             },
             child: Text(
               'Yes',
-              style: TextStyle(color: isCancel ? Colors.red : Colors.green),
+              style: TextStyle(
+                  color: newStatus == 'cancelled'
+                      ? Colors.red
+                      : Colors.green),
             ),
           ),
         ],
@@ -164,7 +244,7 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update status: $e')),
+        SnackBar(content: Text('Failed to update order: $e')),
       );
     }
   }
