@@ -8,7 +8,6 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
-
 class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
@@ -17,7 +16,6 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
           backgroundColor:Color(0xFF1A2B7B),
         title: Text("Home Page"),
-        
       ),
     );
   }

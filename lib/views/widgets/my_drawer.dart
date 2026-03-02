@@ -9,6 +9,8 @@ import 'package:ubwinza_sellers/views/splashScreen/splash_screen.dart';
 import '../../features/earnings/presentation/earnings_screen.dart';
 import '../../features/orders/presentation/history_orders_screen.dart';
 import '../../features/orders/presentation/new_order_screen.dart';
+import '../../features/orders/presentation/orders_in_preparation_screen.dart';
+import '../../features/orders/presentation/orders_in_transit_screen.dart';
 import '../../features/products/presentation/product_list_screen.dart';
 
 class MyDrawer extends StatefulWidget {
@@ -22,7 +24,7 @@ class _MyDrawerState extends State<MyDrawer> {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: const Color.fromARGB(255, 71, 70, 70),
+      backgroundColor:  primaryColor,
       child: ListView(
         children: [
 
@@ -70,14 +72,14 @@ Container(
         ),
       ),
       const SizedBox(height: 4),
-      Text(
-        sharedPreferences!.getString("restaurantName") ?? 'No Restaurant Name',
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 14,
-        ),
-        textAlign: TextAlign.center,
-      ),
+      // Text(
+      //   sharedPreferences!.getString("restaurantName") ?? 'No Restaurant Name',
+      //   style: const TextStyle(
+      //     color: Colors.white70,
+      //     fontSize: 14,
+      //   ),
+      //   textAlign: TextAlign.center,
+      // ),
     ],
   ),
 ),
@@ -157,6 +159,41 @@ Container(
                     final sellerId = FirebaseAuth.instance.currentUser!.uid;
                     Navigator.push(context,
                       MaterialPageRoute(builder: (_) => NewOrdersScreen(sellerId: sellerId)),
+                    );
+                  },
+                ),
+                const Divider(
+                  height: 10,
+                  color: Colors.grey,
+                  thickness: 2,
+
+                ),
+
+                ListTile(
+                  leading: const Icon(Icons.reorder, color: Colors.white),
+                  title: const Text("Orders in Preparation", style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    final sellerId = FirebaseAuth.instance.currentUser!.uid;
+                    Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => OrdersInPreparationScreen(sellerId: sellerId)),
+                    );
+                  },
+                ),
+
+                const Divider(
+                  height: 10,
+                  color: Colors.grey,
+                  thickness: 2,
+
+                ),
+
+                ListTile(
+                  leading: const Icon(Icons.reorder, color: Colors.white),
+                  title: const Text("Track Orders", style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    final sellerId = FirebaseAuth.instance.currentUser!.uid;
+                    Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => OrdersInTransitScreen(sellerId: sellerId)),
                     );
                   },
                 ),
