@@ -1,13 +1,10 @@
-
 import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:ubwinza_sellers/views/mainScreens/home_screen.dart';
 
 import '../authScreens/auth_screen.dart';
 
-    
 class MySplashScreen extends StatefulWidget {
   const MySplashScreen({super.key});
 
@@ -15,56 +12,112 @@ class MySplashScreen extends StatefulWidget {
   State<MySplashScreen> createState() => _MySplashScreenState();
 }
 
-class _MySplashScreenState extends State<MySplashScreen> {
+class _MySplashScreenState extends State<MySplashScreen>
+    with SingleTickerProviderStateMixin {
 
-  iniTimer() {
-    
-    Timer(const Duration(seconds: 3), () async => {
+  late AnimationController _controller;
+  late Animation<double> _fade;
+  late Animation<double> _scale;
 
-      if(FirebaseAuth.instance.currentUser == null) {
-        Navigator.push(context, MaterialPageRoute(builder: (c) => AuthScreen()))
+  @override
+  void initState() {
+    super.initState();
 
+    // 🔥 Animation setup
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+
+    _fade = Tween<double>(begin: 0, end: 1).animate(_controller);
+    _scale = Tween<double>(begin: 0.8, end: 1).animate(_controller);
+
+    _controller.forward();
+
+    _initTimer();
+  }
+
+  void _initTimer() {
+    Timer(const Duration(seconds: 3), () {
+      if (FirebaseAuth.instance.currentUser == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (c) => AuthScreen()),
+        );
       } else {
-        Navigator.push(context, MaterialPageRoute(builder: (c) => HomeScreen()))
-
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (c) => HomeScreen()),
+        );
       }
     });
   }
 
   @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-
-    iniTimer();
-
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF1A2B7B), // 🔥 brand color
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Image.asset(
-                "images/sellers.webp"
-              ),
+        child: FadeTransition(
+          opacity: _fade,
+          child: ScaleTransition(
+            scale: _scale,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+
+                // 🔥 LOGO
+                Image.asset(
+                  "images/ubwinza_logo.png",
+                  width: 130,
+                ),
+
+                const SizedBox(height: 20),
+
+                // 🔥 APP NAME
+                const Text(
+                  "Ubwinza Sellers",
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: Colors.white,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // 🔥 TAGLINE
+                const Text(
+                  "Sell • Grow • Earn",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // 🔄 LOADER
+                const SizedBox(
+                  width: 25,
+                  height: 25,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
-            const Text(
-              "Sellers App",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                letterSpacing: 3,
-                fontSize: 26,
-                color: Colors.grey
-              ),
-            )
-          ],
+          ),
         ),
       ),
     );
   }
 }
-    
